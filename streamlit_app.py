@@ -2,12 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-import plotly.express as px
 
 # ----------------------------
 # Page Config
 # ----------------------------
-st.set_page_config(page_title="Ultimate Penguin Predictor", layout="wide", page_icon="🐧")
+st.set_page_config(page_title="Penguin Predictor", layout="wide", page_icon="🐧")
 
 # ----------------------------
 # Theme toggle
@@ -18,14 +17,15 @@ if mode == "Dark":
         """<style>
             body {background-color: #0e1117; color: white;}
             .stButton>button {background-color: #0a84ff; color: white;}
-        </style>""", unsafe_allow_html=True
+        </style>""",
+        unsafe_allow_html=True
     )
 
 # ----------------------------
 # Title
 # ----------------------------
-st.title("🐧 Ultimate Penguin Species Predictor")
-st.info("Interactive app to predict penguin species, save results, and visualize data.")
+st.title("🐧 Penguin Species Predictor")
+st.info("Predict the species of a penguin based on its features.")
 
 # ----------------------------
 # Load Data
@@ -38,13 +38,13 @@ def load_data():
 df = load_data()
 
 # ----------------------------
-# History Storage
+# Prediction History
 # ----------------------------
 if 'history' not in st.session_state:
     st.session_state['history'] = pd.DataFrame(columns=["species_predicted", "Adelie", "Chinstrap", "Gentoo"])
 
 # ----------------------------
-# Tabs Layout
+# Tabs
 # ----------------------------
 tab1, tab2, tab3, tab4 = st.tabs(["Data Overview", "Input Features", "Prediction", "Dashboard"])
 
@@ -55,14 +55,11 @@ with tab1:
     st.subheader("Dataset")
     st.dataframe(df)
 
-    st.subheader("Scatter Plot")
-    fig = px.scatter(df, x="bill_length_mm", y="body_mass_g",
-                     color="species", size="flipper_length_mm",
-                     hover_data=["sex", "island"])
-    st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Scatter Plot (Simple)")
+    st.scatter_chart(df[['bill_length_mm', 'body_mass_g']])
 
 # ----------------------------
-# Tab 2: Input Features (Cards)
+# Tab 2: Input Features
 # ----------------------------
 with tab2:
     st.subheader("Enter Penguin Features")
@@ -70,26 +67,22 @@ with tab2:
     
     with col1:
         island = st.selectbox("Island", ("Biscoe", "Dream", "Torgersen"),
-                              help="Select the island where the penguin was observed")
-        bill_length_mm = st.slider("Bill length (mm)",
-                                   float(df.bill_length_mm.min()), float(df.bill_length_mm.max()),
-                                   float(df.bill_length_mm.mean()), help="Length of the bill in millimeters")
+                              help="Select the island")
+        bill_length_mm = st.slider("Bill length (mm)", float(df.bill_length_mm.min()),
+                                   float(df.bill_length_mm.max()), float(df.bill_length_mm.mean()))
     
     with col2:
-        bill_depth_mm = st.slider("Bill depth (mm)",
-                                  float(df.bill_depth_mm.min()), float(df.bill_depth_mm.max()),
-                                  float(df.bill_depth_mm.mean()), help="Depth of the bill in millimeters")
-        flipper_length_mm = st.slider("Flipper length (mm)",
-                                      float(df.flipper_length_mm.min()), float(df.flipper_length_mm.max()),
-                                      float(df.flipper_length_mm.mean()), help="Length of the flipper")
+        bill_depth_mm = st.slider("Bill depth (mm)", float(df.bill_depth_mm.min()),
+                                  float(df.bill_depth_mm.max()), float(df.bill_depth_mm.mean()))
+        flipper_length_mm = st.slider("Flipper length (mm)", float(df.flipper_length_mm.min()),
+                                      float(df.flipper_length_mm.max()), float(df.flipper_length_mm.mean()))
     
     with col3:
-        body_mass_g = st.slider("Body mass (g)",
-                                float(df.body_mass_g.min()), float(df.body_mass_g.max()),
-                                float(df.body_mass_g.mean()), help="Body weight in grams")
-        sex = st.selectbox("Sex", ("male", "female"), help="Gender of the penguin")
-        age_category = st.radio("Age Category", ("Juvenile", "Adult"), help="Approximate age category")
-    
+        body_mass_g = st.slider("Body mass (g)", float(df.body_mass_g.min()),
+                                float(df.body_mass_g.max()), float(df.body_mass_g.mean()))
+        sex = st.selectbox("Sex", ("male", "female"))
+        age_category = st.radio("Age Category", ("Juvenile", "Adult"))
+
     input_data = pd.DataFrame({
         "island": [island],
         "bill_length_mm": [bill_length_mm],
@@ -99,7 +92,6 @@ with tab2:
         "sex": [sex],
         "age_category": [age_category]
     })
-    
     st.write("Your Input Penguin")
     st.dataframe(input_data)
 
@@ -128,12 +120,11 @@ with tab3:
     st.success(f"🟢 {species[pred_class]}")
     
     st.subheader("Prediction Probabilities")
-    prob_df = pd.DataFrame([pred_proba], columns=species)
     for sp, prob in zip(species, pred_proba):
         st.write(f"{sp}: {prob:.2f}")
         st.progress(int(prob*100))
     
-    # Save prediction to history
+    # Save to history
     new_row = pd.DataFrame({
         "species_predicted": [species[pred_class]],
         "Adelie": [pred_proba[0]],
@@ -144,7 +135,8 @@ with tab3:
     
     # Download button
     csv = st.session_state['history'].to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download Prediction History", data=csv, file_name="penguin_predictions.csv", mime="text/csv")
+    st.download_button("📥 Download Prediction History", data=csv,
+                       file_name="penguin_predictions.csv", mime="text/csv")
 
 # ----------------------------
 # Tab 4: Dashboard
@@ -154,5 +146,4 @@ with tab4:
     st.dataframe(st.session_state['history'])
     
     st.subheader("Species Distribution")
-    fig2 = px.histogram(st.session_state['history'], x="species_predicted", title="Predicted Species Count")
-    st.plotly_chart(fig2, use_container_width=True)
+    st.bar_chart(st.session_state['history']['species_predicted'].value_counts())
